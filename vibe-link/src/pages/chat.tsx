@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useLocation, useParams, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { fetchConversations, fetchMessages, sendMessage, startConversation, markMessagesAsRead, addOptimisticMessage } from '@/store/slices/chatSlice'
+import { fetchConversations, fetchMessages, fetchMoreMessages, sendMessage, startConversation, markMessagesAsRead, addOptimisticMessage } from '@/store/slices/chatSlice'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -20,7 +20,7 @@ export function ChatPage() {
   const { recipientId } = useParams<{ recipientId?: string }>()
   const dispatch = useAppDispatch()
   const { user } = useAppSelector(state => state.auth)
-  const { conversations, messages, isLoading: conversationsLoading } = useAppSelector(state => state.chat)
+  const { conversations, messages, isLoading: conversationsLoading, messagesPagination } = useAppSelector(state => state.chat)
   
   const [selectedChat, setSelectedChat] = useState<number | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -28,6 +28,9 @@ export function ChatPage() {
   const [isMobile, setIsMobile] = useState(false)
   const [showSidebar, setShowSidebar] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const messagesContainerRef = useRef<HTMLDivElement>(null)
+  const previousScrollHeightRef = useRef<number | null>(null)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
 
   // Check if mobile
   useEffect(() => {
@@ -47,8 +50,35 @@ export function ChatPage() {
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (!isLoadingMore) {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    } else if (messagesContainerRef.current && previousScrollHeightRef.current !== null) {
+      // Preserve scroll position when older messages are prepended
+      const container = messagesContainerRef.current
+      const newScrollHeight = container.scrollHeight
+      const delta = newScrollHeight - previousScrollHeightRef.current
+      container.scrollTop = delta
+      previousScrollHeightRef.current = null
+      setIsLoadingMore(false)
+    }
   }, [messages])
+  // Infinite scroll: load older messages when scrolled to top
+  const handleMessagesScroll = async () => {
+    const container = messagesContainerRef.current
+    if (!container || isLoadingMore) return
+    if (container.scrollTop <= 0 && messagesPagination?.previous) {
+      // Record current scroll height to restore position after prepend
+      previousScrollHeightRef.current = container.scrollHeight
+      setIsLoadingMore(true)
+      try {
+        await dispatch(fetchMoreMessages(messagesPagination.previous)).unwrap()
+      } catch (e) {
+        setIsLoadingMore(false)
+        previousScrollHeightRef.current = null
+      }
+    }
+  }
+
 
   // Load conversations on mount and periodically
   useEffect(() => {
@@ -351,7 +381,7 @@ export function ChatPage() {
             </div>
 
             {/* Chat Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll">
+            <div ref={messagesContainerRef} onScroll={handleMessagesScroll} className="flex-1 overflow-y-auto p-4 space-y-4 chat-scroll">
               {!messages || messages.length === 0 ? (
                 <div className="text-center py-8">
                   <MessageCircle className="h-8 w-8 text-muted-foreground mx-auto mb-2" />

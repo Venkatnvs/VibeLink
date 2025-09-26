@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchFollowerPosts, createPost, toggleLike, toggleShare } from '@/store/slices/postsSlice'
 import { toggleFollow, fetchTopMatches } from '@/store/slices/socialSlice'
@@ -23,6 +23,7 @@ import {
   UserPlus,
   X
 } from 'lucide-react'
+import ShareModal from '@/components/share/ShareModal'
 
 export function HomePage() {
   const navigate = useNavigate()
@@ -38,6 +39,10 @@ export function HomePage() {
     hashtags: ''
   })
   const [imagePreview, setImagePreview] = useState<string>('')
+  const [searchParams] = useSearchParams()
+
+  const [shareOpen, setShareOpen] = useState(false)
+  const [sharePostId, setSharePostId] = useState<number | null>(null)
 
   // Load data on component mount
   useEffect(() => {
@@ -50,7 +55,8 @@ export function HomePage() {
   }
 
   const handleShare = (postId: number) => {
-    dispatch(toggleShare(postId))
+    setSharePostId(postId)
+    setShareOpen(true)
   }
 
   const handleFollow = (userId: number) => {
@@ -117,8 +123,37 @@ export function HomePage() {
   // Get top 6 suggested users
   const userMatches = Array.isArray(suggestedUsers) ? suggestedUsers.filter(user => user).slice(0, 6) : []
 
+  // Highlight support (scroll to post and ring)
+  const highlightType = searchParams.get('highlight')
+  const highlightPostId = searchParams.get('postId')
+
+  useEffect(() => {
+    if (highlightType === 'post' && highlightPostId && followerPosts?.length) {
+      const timeoutId = setTimeout(() => {
+        const el = document.querySelector(`[data-post-id="${highlightPostId}"]`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+        }
+      }, 400)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [highlightType, highlightPostId, followerPosts])
+
+  const shouldHighlightPost = (postId: number) => highlightType === 'post' && highlightPostId && Number(highlightPostId) === postId
+
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <ShareModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={`${window.location.origin}/?highlight=post&postId=${sharePostId ?? ''}`}
+        shareText={sharePostId ? followerPosts.find(p => p?.id === sharePostId)?.content?.slice(0, 140) : undefined}
+        onShared={() => {
+          if (sharePostId) {
+            dispatch(toggleShare(sharePostId))
+          }
+        }}
+      />
       {/* Create Post Section */}
       <Card className="mb-8">
         <CardContent className="p-6">
@@ -238,6 +273,12 @@ export function HomePage() {
                         </Badge>
                       </div>
 
+                      {match.follows_you && (
+                        <div className="mb-2">
+                          <Badge variant="secondary" className="text-xs">Follows you</Badge>
+                        </div>
+                      )}
+
                       <p className="text-sm text-muted-foreground mb-2 line-clamp-2">{match.bio}</p>
 
                       <div className="flex items-center space-x-2 text-xs text-muted-foreground mb-3">
@@ -289,7 +330,7 @@ export function HomePage() {
           </div>
         ) : (
           followerPosts.filter(post => post && post.user).map((post) => (
-            <Card key={post.id} className="card-hover">
+            <Card key={post.id} data-post-id={post.id} className={`card-hover transition-all duration-300 ${shouldHighlightPost(post.id) ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 shadow-lg' : ''}`}>
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
                   <div 

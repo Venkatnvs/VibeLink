@@ -177,6 +177,12 @@ def get_user_profile(request, user_id):
     """Get a specific user's profile by ID"""
     try:
         user = get_object_or_404(User, id=user_id, is_active=True)
+        # Load target user's privacy settings
+        user_settings = getattr(user, 'settings', None)
+        profile_visibility = getattr(user_settings, 'profile_visibility', 'public') if user_settings else 'public'
+        show_location = getattr(user_settings, 'show_location', True) if user_settings else True
+        is_self = (request.user.id == user.id)
+        can_view_private = is_self
         
         # Get match data for this user
         matches = get_user_matches(request.user, limit=1)
@@ -194,23 +200,38 @@ def get_user_profile(request, user_id):
                 'distance': None
             }
         
+        # Respect location visibility
+        masked_city = user.city if (show_location or is_self) else None
+        masked_state = user.state if (show_location or is_self) else None
+        masked_distance = match_data['distance'] if (show_location or is_self) else None
+
+        # Build base payload
         user_data = {
             'id': user.id,
             'username': user.username,
             'full_name': user.get_full_name(),
             'profile_photo': request.build_absolute_uri(user.profile_photo.url) if user.profile_photo else None,
-            'bio': user.bio,
-            'age': user.age,
-            'city': user.city,
-            'state': user.state,
+            'bio': user.bio if (profile_visibility == 'public' or can_view_private) else None,
+            'age': user.age if (profile_visibility == 'public' or can_view_private) else None,
+            'city': masked_city if (profile_visibility == 'public' or can_view_private) else None,
+            'state': masked_state if (profile_visibility == 'public' or can_view_private) else None,
             'hashtags': user.hashtags,
             'match_percentage': match_data['match_percentage'],
-            'distance': match_data['distance'],
+            'distance': masked_distance if (profile_visibility == 'public' or can_view_private) else None,
             'is_following': Follow.objects.filter(follower=request.user, following=user).exists(),
             'followers_count': user.followers.count(),
             'following_count': user.following.count(),
             'posts_count': user.posts.count(),
-            'date_joined': user.date_joined.isoformat()
+            'date_joined': user.date_joined.isoformat(),
+            'profile_visibility': profile_visibility,
+            'is_private': (profile_visibility == 'private'),
+            'can_view_private': can_view_private,
+            # Whether target user follows current user back
+            'follows_you': Follow.objects.filter(follower=user, following=request.user).exists(),
+            'is_mutual_follow': (
+                Follow.objects.filter(follower=request.user, following=user).exists() and
+                Follow.objects.filter(follower=user, following=request.user).exists()
+            )
         }
         
         return Response(user_data, status=status.HTTP_200_OK)
@@ -232,13 +253,18 @@ def top_matches(request):
                 'username': match['user'].username,
                 'full_name': match['user'].get_full_name(),
                 'profile_photo': request.build_absolute_uri(match['user'].profile_photo.url) if match['user'].profile_photo else None,
-                'bio': match['user'].bio,
-                'age': match['user'].age,
-                'city': match['user'].city,
-                'state': match['user'].state,
+                # Respect target user's privacy and location settings
+                **(lambda u: (
+                    (lambda s: {
+                        'bio': u.bio if getattr(s, 'profile_visibility', 'public') == 'public' else None,
+                        'age': u.age if getattr(s, 'profile_visibility', 'public') == 'public' else None,
+                        'city': u.city if getattr(s, 'show_location', True) and getattr(s, 'profile_visibility', 'public') == 'public' else None,
+                        'state': u.state if getattr(s, 'show_location', True) and getattr(s, 'profile_visibility', 'public') == 'public' else None,
+                    })(getattr(u, 'settings', None))
+                ))(match['user']),
                 'hashtags': match['user'].hashtags,
                 'match_percentage': match['match_percentage'],
-                'distance': match['distance'],
+                'distance': match['distance'] if (getattr(getattr(match['user'], 'settings', None), 'show_location', True) and getattr(getattr(match['user'], 'settings', None), 'profile_visibility', 'public') == 'public') else None,
                 'is_following': Follow.objects.filter(follower=request.user, following=match['user']).exists(),
                 'followers_count': match['user'].followers.count(),
                 'following_count': match['user'].following.count(),

@@ -3,12 +3,10 @@ import AXIOS_INSTANCE from "../axios";
 export interface UserSettings {
   likes_notifications: boolean;
   shares_notifications: boolean;
-  matches_notifications: boolean;
   messages_notifications: boolean;
-  profile_visibility: 'public' | 'friends' | 'private';
+  profile_visibility: 'public' | 'private';
   show_location: boolean;
   allow_messages: 'everyone' | 'friends' | 'none';
-  show_online_status: boolean;
   location_radius: number;
   min_age: number;
   max_age: number;

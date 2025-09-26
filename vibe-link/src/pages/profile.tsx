@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchPosts, createPost, toggleLike, toggleShare } from '@/store/slices/postsSlice'
 import { updateUserApi } from '@/apis/auth'
@@ -31,6 +32,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog'
+import ShareModal from '@/components/share/ShareModal'
 
 export function ProfilePage() {
   const dispatch = useAppDispatch()
@@ -72,8 +74,29 @@ export function ProfilePage() {
   const [isUpdatingProfile, setIsUpdatingProfile] = useState(false)
   const [isUpdatingPhoto, setIsUpdatingPhoto] = useState(false)
 
+  const [shareOpen, setShareOpen] = useState(false)
+  const [sharePostId, setSharePostId] = useState<number | null>(null)
+
   const currentUser = user
   const userPosts = posts.filter(post => post && post.user && post.user.id === parseInt(currentUser?.id || '0'))
+  const [searchParams] = useSearchParams()
+
+  const highlightType = searchParams.get('highlight')
+  const highlightPostId = searchParams.get('postId')
+
+  useEffect(() => {
+    if (highlightType === 'post' && highlightPostId && userPosts?.length) {
+      const timeoutId = setTimeout(() => {
+        const el = document.querySelector(`[data-post-id="${highlightPostId}"]`)
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'nearest' })
+        }
+      }, 400)
+      return () => clearTimeout(timeoutId)
+    }
+  }, [highlightType, highlightPostId, userPosts])
+
+  const shouldHighlightPost = (postId: number) => highlightType === 'post' && highlightPostId && Number(highlightPostId) === postId
 
   useEffect(() => {
     if (user?.id) {
@@ -86,7 +109,8 @@ export function ProfilePage() {
   }
 
   const handleShare = (postId: number) => {
-    dispatch(toggleShare(postId))
+    setSharePostId(postId)
+    setShareOpen(true)
   }
 
   const handleEditProfile = () => {
@@ -249,6 +273,17 @@ export function ProfilePage() {
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-4xl">
+      <ShareModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={`${window.location.origin}/profile?highlight=post&postId=${sharePostId ?? ''}`}
+        shareText={sharePostId ? userPosts.find(p => p.id === sharePostId)?.content?.slice(0, 140) : undefined}
+        onShared={() => {
+          if (sharePostId) {
+            dispatch(toggleShare(sharePostId))
+          }
+        }}
+      />
       {/* Profile Header */}
       <Card className="mb-8">
         <div className="relative">
@@ -724,7 +759,7 @@ export function ProfilePage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
             {userPosts.map((post) => (
-              <Card key={post.id} className="group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-card/50 backdrop-blur-sm">
+              <Card key={post.id} data-post-id={post.id} className={`group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-card/50 backdrop-blur-sm ${shouldHighlightPost(post.id) ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : ''}`}>
                 <CardHeader className="pb-4">
                   <div className="flex items-center space-x-3">
                     <Avatar className="w-10 h-10 ring-2 ring-primary/20">

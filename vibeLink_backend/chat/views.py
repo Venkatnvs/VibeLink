@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view, permission_classes
 from django.shortcuts import get_object_or_404
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from rest_framework.pagination import PageNumberPagination
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer, CreateMessageSerializer
 
@@ -37,11 +38,34 @@ class ConversationDetailView(generics.RetrieveAPIView):
 
 class MessageListView(generics.ListCreateAPIView):
     permission_classes = [permissions.IsAuthenticated]
+    
+    class LatestFirstPagination(PageNumberPagination):
+        page_size = 20
+        page_query_param = 'page'
+
+        def get_paginated_response(self, data):
+            # With newest-first ordering, DRF's "next" is actually the older page.
+            # Expose that URL as "previous" to match UI expectation (load older on scroll up).
+            older_url = self.get_next_link()
+            return Response({
+                'count': self.page.paginator.count,
+                'next': None,               # No forward pagination for newer-than-first-page
+                'previous': older_url,      # Use previous to indicate older messages
+                'results': data,
+            })
+
+    pagination_class = LatestFirstPagination
 
     def get_queryset(self):
         conversation_id = self.kwargs['conversation_id']
         conversation = get_object_or_404(Conversation, id=conversation_id, participants=self.request.user)
-        return Message.objects.filter(conversation=conversation).select_related('sender')
+        # Order latest first for chat view; stable tie-breaker by id
+        return (
+            Message.objects
+            .filter(conversation=conversation)
+            .select_related('sender')
+            .order_by('-created_at', '-id')
+        )
 
     def get_serializer_class(self):
         if self.request.method == 'POST':

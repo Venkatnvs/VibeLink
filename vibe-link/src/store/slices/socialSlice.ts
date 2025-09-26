@@ -278,6 +278,21 @@ const socialSlice = createSlice({
           aiRecommendation.is_following = is_following
         }
 
+        // Update current profile view if it matches
+        if (state.currentUserProfile && state.currentUserProfile.id === userId) {
+          state.currentUserProfile.is_following = is_following
+          // Optimistically adjust followers_count on target user
+          if (typeof state.currentUserProfile.followers_count === 'number') {
+            state.currentUserProfile.followers_count += is_following ? 1 : -1
+            if (state.currentUserProfile.followers_count < 0) {
+              state.currentUserProfile.followers_count = 0
+            }
+          }
+          // Update mutual follow flag based on follows_you
+          const followsYou = !!state.currentUserProfile.follows_you
+          state.currentUserProfile.is_mutual_follow = is_following && followsYou
+        }
+
         // if followed, remove from lists so they no longer show
         if (is_following) {
           state.discoverUsers = state.discoverUsers.filter(u => u.id !== userId)

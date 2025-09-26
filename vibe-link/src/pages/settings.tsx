@@ -163,7 +163,6 @@ export function SettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="public">Public</SelectItem>
-                  <SelectItem value="friends">Friends Only</SelectItem>
                   <SelectItem value="private">Private</SelectItem>
                 </SelectContent>
               </Select>
@@ -196,18 +195,6 @@ export function SettingsPage() {
                   <SelectItem value="none">No One</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <Separator />
-            <div className="flex items-center justify-between">
-              <div>
-                <Label htmlFor="showOnlineStatus">Show Online Status</Label>
-                <p className="text-sm text-muted-foreground">Let others see when you're online</p>
-              </div>
-              <Switch
-                id="showOnlineStatus"
-                checked={settings.privacy.showOnlineStatus}
-                onCheckedChange={(checked) => handlePrivacyChange('showOnlineStatus', checked)}
-              />
             </div>
           </CardContent>
         </Card>

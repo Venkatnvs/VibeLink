@@ -21,6 +21,10 @@ export const getConversationApi = (conversationId: number) =>
 export const getMessagesApi = (conversationId: number) =>
   AXIOS_INSTANCE.get<PaginatedResponse<Message>>(`/api/chat/conversations/${conversationId}/messages/`);
 
+// Get messages by full pagination URL (for next/previous links)
+export const getMessagesByUrlApi = (url: string) =>
+  AXIOS_INSTANCE.get<PaginatedResponse<Message>>(url);
+
 // Send a message
 export const sendMessageApi = (conversationId: number, content: string) =>
   AXIOS_INSTANCE.post<Message>(`/api/chat/conversations/${conversationId}/messages/`, {

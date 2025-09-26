@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Follow, Notification
+from .models import Follow, Notification, AIRecommendationCache
 
 @admin.register(Follow)
 class FollowAdmin(admin.ModelAdmin):
@@ -16,3 +16,9 @@ class NotificationAdmin(admin.ModelAdmin):
     def content_preview(self, obj):
         return obj.content[:50] + "..." if len(obj.content) > 50 else obj.content
     content_preview.short_description = "Content Preview"
+
+@admin.register(AIRecommendationCache)
+class AIRecommendationCacheAdmin(admin.ModelAdmin):
+    list_display = ['id', 'user', 'cache_key', 'created_at', 'expires_at', 'is_valid']
+    list_filter = ['is_valid', 'created_at', 'expires_at']
+    search_fields = ['user__username', 'cache_key']

@@ -141,6 +141,13 @@ export interface DiscoverUser {
   posts_count: number
   date_joined?: string
   created_at?: string
+  // Privacy
+  profile_visibility?: 'public' | 'private'
+  is_private?: boolean
+  can_view_private?: boolean
+  // Relationship
+  follows_you?: boolean
+  is_mutual_follow?: boolean
 }
 
 export interface AIRecommendation extends DiscoverUser {

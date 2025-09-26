@@ -1,19 +1,16 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { getUserSettingsApi, updateUserSettingsApi } from '@/apis/settings'
-import type { UserSettings as ApiUserSettings } from '@/apis/settings'
 
 export interface SettingsState {
   notifications: {
     likes: boolean
     shares: boolean
-    matches: boolean
     messages: boolean
   }
   privacy: {
-    profileVisibility: 'public' | 'friends' | 'private'
+    profileVisibility: 'public' | 'private'
     showLocation: boolean
     allowMessages: 'everyone' | 'friends' | 'none'
-    showOnlineStatus: boolean
   }
   matchmaking: {
     locationRadius: number
@@ -32,14 +29,12 @@ const initialState: SettingsState = {
   notifications: {
     likes: true,
     shares: true,
-    matches: true,
     messages: true
   },
   privacy: {
     profileVisibility: 'public',
     showLocation: true,
-    allowMessages: 'friends',
-    showOnlineStatus: false
+    allowMessages: 'friends'
   },
   matchmaking: {
     locationRadius: 50,
@@ -67,14 +62,12 @@ export const loadSettings = createAsyncThunk(
         notifications: {
           likes: apiSettings.likes_notifications,
           shares: apiSettings.shares_notifications,
-          matches: apiSettings.matches_notifications,
           messages: apiSettings.messages_notifications
         },
         privacy: {
           profileVisibility: apiSettings.profile_visibility,
           showLocation: apiSettings.show_location,
-          allowMessages: apiSettings.allow_messages,
-          showOnlineStatus: apiSettings.show_online_status
+          allowMessages: apiSettings.allow_messages
         },
         matchmaking: {
           locationRadius: apiSettings.location_radius,
@@ -158,12 +151,10 @@ export const saveSettings = createAsyncThunk(
       const apiSettings = {
         likes_notifications: settings.notifications.likes,
         shares_notifications: settings.notifications.shares,
-        matches_notifications: settings.notifications.matches,
         messages_notifications: settings.notifications.messages,
         profile_visibility: settings.privacy.profileVisibility,
         show_location: settings.privacy.showLocation,
         allow_messages: settings.privacy.allowMessages,
-        show_online_status: settings.privacy.showOnlineStatus,
         location_radius: settings.matchmaking.locationRadius,
         min_age: settings.matchmaking.ageRange.min,
         max_age: settings.matchmaking.ageRange.max,
@@ -180,14 +171,12 @@ export const saveSettings = createAsyncThunk(
         notifications: {
           likes: apiSettingsResponse.likes_notifications,
           shares: apiSettingsResponse.shares_notifications,
-          matches: apiSettingsResponse.matches_notifications,
           messages: apiSettingsResponse.messages_notifications
         },
         privacy: {
           profileVisibility: apiSettingsResponse.profile_visibility,
           showLocation: apiSettingsResponse.show_location,
-          allowMessages: apiSettingsResponse.allow_messages,
-          showOnlineStatus: apiSettingsResponse.show_online_status
+          allowMessages: apiSettingsResponse.allow_messages
         },
         matchmaking: {
           locationRadius: apiSettingsResponse.location_radius,

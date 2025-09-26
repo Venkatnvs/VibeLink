@@ -4,6 +4,7 @@ import {
   getConversationsApi, 
   getConversationApi, 
   getMessagesApi, 
+  getMessagesByUrlApi,
   sendMessageApi, 
   startConversationApi, 
   markMessagesReadApi 
@@ -14,6 +15,11 @@ export interface ChatState {
   conversations: Conversation[]
   currentConversation: Conversation | null
   messages: Message[]
+  messagesPagination: {
+    next: string | null
+    previous: string | null
+    count: number
+  }
   isLoading: boolean
   error: string | null
 }
@@ -22,6 +28,7 @@ const initialState: ChatState = {
   conversations: [],
   currentConversation: null,
   messages: [],
+  messagesPagination: { next: null, previous: null, count: 0 },
   isLoading: false,
   error: null,
 }
@@ -59,6 +66,19 @@ export const fetchMessages = createAsyncThunk(
       return response.data
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Failed to fetch messages')
+    }
+  }
+)
+
+// Load more messages from a pagination URL and prepend them (older messages)
+export const fetchMoreMessages = createAsyncThunk(
+  'chat/fetchMoreMessages',
+  async (url: string, { rejectWithValue }) => {
+    try {
+      const response = await getMessagesByUrlApi(url)
+      return response.data
+    } catch (error: any) {
+      return rejectWithValue(error.response?.data?.detail || 'Failed to load more messages')
     }
   }
 )
@@ -169,9 +189,35 @@ const chatSlice = createSlice({
         // Preserve optimistic messages when fetching from server
         const optimisticMessages = state.messages.filter(m => m.id < 0 && m.sender.username === 'You')
         const serverMessages = Array.isArray(action.payload.results) ? action.payload.results : []
-        state.messages = [...serverMessages, ...optimisticMessages]
+        // Backend returns newest-first; store oldest->newest for UI
+        const ascendingMessages = [...serverMessages].reverse()
+        state.messages = [...ascendingMessages, ...optimisticMessages]
+        // Backend now returns newest-first and places "older" page in previous
+        state.messagesPagination.next = null
+        state.messagesPagination.previous = action.payload.previous ?? null
+        state.messagesPagination.count = action.payload.count ?? serverMessages.length
       })
       .addCase(fetchMessages.rejected, (state, action) => {
+        state.isLoading = false
+        state.error = action.payload as string
+      })
+
+      // Fetch more messages (older)
+      .addCase(fetchMoreMessages.pending, (state) => {
+        state.isLoading = true
+        state.error = null
+      })
+      .addCase(fetchMoreMessages.fulfilled, (state, action) => {
+        state.isLoading = false
+        const moreServerMessages = Array.isArray(action.payload.results) ? action.payload.results : []
+        // Backend returns newest-first in this page; convert to oldest-first, then prepend
+        const moreAscending = [...moreServerMessages].reverse()
+        state.messages = [...moreAscending, ...state.messages]
+        state.messagesPagination.next = null
+        state.messagesPagination.previous = action.payload.previous ?? null
+        state.messagesPagination.count = action.payload.count ?? state.messagesPagination.count
+      })
+      .addCase(fetchMoreMessages.rejected, (state, action) => {
         state.isLoading = false
         state.error = action.payload as string
       })

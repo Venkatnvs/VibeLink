@@ -264,6 +264,9 @@ export function DiscoverPage() {
                 <Badge variant="secondary">
                   {Math.round(currentProfile.distance)}km away
                 </Badge>
+                {currentProfile.follows_you && (
+                  <Badge variant="secondary">Follows you</Badge>
+                )}
               </div>
 
               <div className="flex flex-wrap gap-2 justify-center">

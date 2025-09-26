@@ -10,6 +10,8 @@ class UserDiscoverySerializer(serializers.ModelSerializer):
     full_name = serializers.SerializerMethodField()
     profile_photo = serializers.SerializerMethodField()
     is_following = serializers.SerializerMethodField()
+    follows_you = serializers.SerializerMethodField()
+    is_mutual_follow = serializers.SerializerMethodField()
     match_percentage = serializers.SerializerMethodField()
     distance = serializers.SerializerMethodField()
     followers_count = serializers.SerializerMethodField()
@@ -21,7 +23,7 @@ class UserDiscoverySerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'full_name', 'profile_photo', 'bio', 'age',
             'city', 'state', 'latitude', 'longitude', 'hashtags',
-            'is_following', 'match_percentage', 'distance',
+            'is_following', 'follows_you', 'is_mutual_follow', 'match_percentage', 'distance',
             'followers_count', 'following_count', 'posts_count',
             'date_joined'
         ]
@@ -41,6 +43,20 @@ class UserDiscoverySerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.user.is_authenticated:
             return Follow.objects.filter(follower=request.user, following=obj).exists()
+        return False
+
+    def get_follows_you(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return Follow.objects.filter(follower=obj, following=request.user).exists()
+        return False
+
+    def get_is_mutual_follow(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            a = Follow.objects.filter(follower=request.user, following=obj).exists()
+            b = Follow.objects.filter(follower=obj, following=request.user).exists()
+            return a and b
         return False
 
     def get_match_percentage(self, obj):

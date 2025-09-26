@@ -9,13 +9,12 @@ class UserSettings(models.Model):
     # Notification settings
     likes_notifications = models.BooleanField(default=True)
     shares_notifications = models.BooleanField(default=True)
-    matches_notifications = models.BooleanField(default=True)
     messages_notifications = models.BooleanField(default=True)
     
     # Privacy settings
     profile_visibility = models.CharField(
         max_length=10,
-        choices=[('public', 'Public'), ('friends', 'Friends Only'), ('private', 'Private')],
+        choices=[('public', 'Public'), ('private', 'Private')],
         default='public'
     )
     show_location = models.BooleanField(default=True)
@@ -24,7 +23,6 @@ class UserSettings(models.Model):
         choices=[('everyone', 'Everyone'), ('friends', 'Friends Only'), ('none', 'None')],
         default='friends'
     )
-    show_online_status = models.BooleanField(default=False)
     
     # Matchmaking settings
     location_radius = models.PositiveIntegerField(default=50)  # in kilometers

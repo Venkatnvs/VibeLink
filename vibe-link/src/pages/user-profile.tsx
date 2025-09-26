@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchUserPosts, toggleLike, toggleShare } from '@/store/slices/postsSlice'
@@ -19,6 +19,8 @@ import {
   UserPlus,
   MessageCircle as MessageIcon
 } from 'lucide-react'
+import { Loader2 } from 'lucide-react'
+import ShareModal from '@/components/share/ShareModal'
 
 export function UserProfilePage() {
   const { userId } = useParams<{ userId: string }>()
@@ -26,7 +28,10 @@ export function UserProfilePage() {
   const dispatch = useAppDispatch()
   const [searchParams] = useSearchParams()
   const { userPosts, isLoading: postsLoading } = useAppSelector(state => state.posts)
-  const { currentUserProfile: profileUser, isLoading: profileLoading } = useAppSelector(state => state.social)
+  const { currentUserProfile: profileUser, isLoading: profileLoading, followLoadingIds } = useAppSelector(state => state.social)
+
+  const [shareOpen, setShareOpen] = useState(false)
+  const [sharePostId, setSharePostId] = useState<number | null>(null)
 
   // Get highlight parameters from URL
   const highlightType = searchParams.get('highlight')
@@ -36,9 +41,17 @@ export function UserProfilePage() {
   useEffect(() => {
     if (userId) {
       dispatch(fetchUserProfile(parseInt(userId)))
-      dispatch(fetchUserPosts(parseInt(userId)))
     }
   }, [dispatch, userId])
+
+  // Conditionally fetch posts only if allowed (public or mutual follow)
+  useEffect(() => {
+    if (!userId || !profileUser) return
+    const canSeePosts = !profileUser.is_private || profileUser.is_mutual_follow
+    if (canSeePosts) {
+      dispatch(fetchUserPosts(parseInt(userId)))
+    }
+  }, [dispatch, userId, profileUser])
 
   useEffect(() => {
     if (!profileLoading && !profileUser && userId) {
@@ -123,7 +136,8 @@ export function UserProfilePage() {
   }
 
   const handleShare = (postId: number) => {
-    dispatch(toggleShare(postId))
+    setSharePostId(postId)
+    setShareOpen(true)
   }
 
   const handleFollow = () => {
@@ -136,6 +150,7 @@ export function UserProfilePage() {
   }
 
   const isFollowing = profileUser.is_following
+  const isFollowLoading = followLoadingIds?.includes(profileUser.id)
 
   // Function to check if a post should be highlighted
   const shouldHighlightPost = (postId: number) => {
@@ -145,13 +160,24 @@ export function UserProfilePage() {
   // Function to highlight hashtags in post content
   const highlightHashtagsInContent = (content: string) => {
     if (!highlightHashtag) return content
-    
-    const regex = new RegExp(`#${highlightHashtag}`, 'gi')
-    return content.replace(regex, `<mark class="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">#$1</mark>`)
+    const escaped = highlightHashtag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const regex = new RegExp(`#${escaped}`, 'gi')
+    return content.replace(regex, (match) => `<mark class="bg-yellow-200 dark:bg-yellow-800 px-1 rounded">${match}</mark>`)
   }
 
   return (
     <div className="container mx-auto px-4 py-6 max-w-6xl">
+      <ShareModal
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        shareUrl={`${window.location.origin}/user/${userId}?highlight=post&postId=${sharePostId ?? ''}`}
+        shareText={sharePostId ? userPosts.find(p => p.id === sharePostId)?.content?.slice(0, 140) : undefined}
+        onShared={() => {
+          if (sharePostId) {
+            dispatch(toggleShare(sharePostId))
+          }
+        }}
+      />
       {/* Back Button */}
       <div className="mb-6">
         <Button variant="ghost" onClick={() => navigate(-1)} className="flex items-center space-x-2">
@@ -209,19 +235,26 @@ export function UserProfilePage() {
               <p className="text-foreground mb-4">{profileUser.bio}</p>
               
               <div className="flex items-center space-x-6 text-sm text-muted-foreground mb-4">
-                <div className="flex items-center space-x-1">
-                  <MapPin className="h-4 w-4" />
-                  <span>{profileUser.city}, {profileUser.state}</span>
-                </div>
-                <div className="flex items-center space-x-1">
-                  <span>{Math.round(profileUser.distance)}km away</span>
-                </div>
+                {profileUser.city && profileUser.state && (
+                  <div className="flex items-center space-x-1">
+                    <MapPin className="h-4 w-4" />
+                    <span>{profileUser.city}, {profileUser.state}</span>
+                  </div>
+                )}
+                {typeof profileUser.distance === 'number' && (
+                  <div className="flex items-center space-x-1">
+                    <span>{Math.round(profileUser.distance)}km away</span>
+                  </div>
+                )}
                 <div className="flex items-center space-x-1">
                   <Calendar className="h-4 w-4" />
                   <span>
                     Joined {profileUser.date_joined ? new Date(profileUser.date_joined).toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) : '-'}
                   </span>
                 </div>
+                {profileUser.is_private && !profileUser.can_view_private && (
+                  <Badge variant="secondary">Private profile</Badge>
+                )}
               </div>
 
               {/* Hashtags */}
@@ -239,9 +272,14 @@ export function UserProfilePage() {
                 variant={isFollowing ? 'outline' : 'default'}
                 onClick={handleFollow}
                 className="flex items-center space-x-2"
+                disabled={!!isFollowLoading}
               >
-                <UserPlus className="h-4 w-4" />
-                <span>{isFollowing ? 'Following' : 'Follow'}</span>
+                {isFollowLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <UserPlus className="h-4 w-4" />
+                )}
+                <span>{isFollowLoading ? 'Processing...' : (isFollowing ? 'Following' : 'Follow')}</span>
               </Button>
               <Button variant="outline" onClick={handleMessage}>
                 <MessageIcon className="h-4 w-4 mr-2" />
@@ -282,6 +320,16 @@ export function UserProfilePage() {
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
             <p className="text-muted-foreground mt-2">Loading posts...</p>
           </div>
+        ) : (profileUser.is_private && !profileUser.is_mutual_follow) ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
+                <Grid3X3 className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-semibold text-foreground mb-2">This profile is private</h3>
+              <p className="text-muted-foreground">Follow each other to see posts.</p>
+            </CardContent>
+          </Card>
         ) : userPosts.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
