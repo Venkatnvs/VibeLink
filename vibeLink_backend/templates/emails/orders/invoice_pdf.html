@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Invoice #{{ order.id }}</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+    <style>
+        @page {
+            size: A4;
+            margin: 1cm;
+        }
+        body {
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            line-height: 1;
+            background-color: #fff;
+            color: #333;
+        }
+        .invoice-container {
+            padding: 20px;
+            background-color: #fff;
+        }
+        .invoice-info {
+            text-align: right;
+            font-size: 12px;
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        .invoice-info p {
+            margin: 0;
+            padding: 0;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+        }
+        .header img {
+            height: 50px;
+            width: 60px;
+        }
+        .header h1 {
+            color: #ff6a00;
+            font-size: 24px;
+            margin: 0px 0;
+            line-height: 1.2;
+        }
+        .invoice-details {
+            margin-bottom: 10px;
+            line-height: 1;
+        }
+        .invoice-details h2 {
+            color: #ff6a00;
+            margin: 0;
+            padding: 10px;
+            font-size: 20px;
+        }
+        .invoice-details p {
+            margin: 2px 0;
+            padding: 5px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+        thead th {
+            background-color: #ff6a00;
+            color: #fff;
+            padding: 6px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        tbody td {
+            padding: 6px;
+            font-size: 12px;
+            line-height: 1.2;
+            border-bottom: 1px solid #eee;
+        }
+        .totals {
+            text-align: right;
+            font-size: 12px;
+            line-height: 1.5;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+        }
+        .totals p {
+            margin: 2px 0;
+            padding: 5px;
+            font-size: 12px;
+            line-height: 1.2;
+        }
+        .totals .line {
+            margin: 2px 0;
+            padding: 0;
+        }
+        .totals .grand-total {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ff6a00;
+            margin-top: 5px;
+            padding-top: 5px;
+        }
+        .totals .coupon {
+            font-size: 14px;
+            color: #ff6a00;
+        }
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            margin-top: 30px;
+            color: #666;
+            line-height: 1.2;
+            border-top: 2px solid #ff6a00;
+        }
+        .footer p{
+            margin: 2px 0;
+            padding: 10px;
+            line-height: 1.2;
+        }
+        p {
+            margin: 2px 0;
+            padding: 1px;
+        }
+        .amount-words {
+            margin-top: 15px;
+            margin-bottom: 20px;
+            text-align: right;
+            font-size: 12px;
+            padding: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="invoice-container">
+        <div class="invoice-info">
+            <p>User: {{ username }} | Date: {{ date|date:"d/m/Y H:i" }}</p>
+        </div>
+        <header class="header">
+            <img src="{{ site_url }}/logo.png" alt="Company Logo" />
+            <h1>{{ site_name }}</h1>
+        </header>
+        <div class="invoice-details">
+            <h2># Invoice</h2>
+            <p><strong>Order ID:</strong> {{ order.id }}</p>
+            <p><strong>Invoice Date:</strong> {{ order.updated_at | date:"M d, Y" }}</p>
+            <p><strong>Customer:</strong> {{ username }}</p>
+            <p><strong>Email:</strong> {{ email }}</p>
+            <p><strong>Phone:</strong> {{ phone_number }}</p>
+            {% if order.shipping_address %}
+            <p><strong>Address:</strong> {{ order.shipping_address.address_line_1 }}, {{ order.shipping_address.address_line_2 }}, {{ order.shipping_address.city }}, {{ order.shipping_address.state }}, {{ order.shipping_address.postal_code }}, {{ order.shipping_address.country }}</p>
+            {% endif %}
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 40%; text-align: left;">Product</th>
+                    <th style="width: 15%; text-align: right;">Quantity</th>
+                    <th style="width: 20%; text-align: right;">Unit Price</th>
+                    <th style="width: 25%; text-align: right;">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for item in order.items %}
+                <tr>
+                    <td style="text-align: left;">{{ item.product_name }}</td>
+                    <td style="text-align: right;">{{ item.quantity }}</td>
+                    <td style="text-align: right;">Rs. {{ item.price|floatformat:2 }}</td>
+                    <td style="text-align: right;">Rs. {{ item.total|floatformat:2 }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <div class="totals">
+            {% if order.tax_amount %}
+            <p><strong>Other Fees:</strong> Rs. {{ order.tax_amount|floatformat:2 }}</p>
+            {% endif %}
+            
+            <p>
+                <strong>Shipping:</strong>
+                {% if order.is_free_shipping %}
+                    Free
+                {% else %}
+                    Rs. {{ order.shipping_cost|floatformat:2 }}
+                {% endif %}
+            </p>
+            <p><strong>Subtotal:</strong> Rs. {{ order.subtotal|floatformat:2 }}</p>
+            {% if order.coupon %}
+            <div class="coupon-section">
+                <p class="coupon"><strong>Coupon Applied:</strong> {{ order.coupon }}</p>
+                <p><strong>Discount:</strong> Rs. -{{ order.discount|floatformat:2 }}</p>
+            </div>
+            {% endif %}
+            <p class="grand-total"><strong>Total:</strong> Rs. {{ order.total|floatformat:2 }}</p>
+        </div>
+        <div class="amount-words">
+            <em>Amount in words:</em>
+            <strong>{{ order.total_num2words }}</strong>
+        </div>
+        </div>        
+        <div class="footer">
+            <p>{{ site_name }} - Thank you for your order!</p>
+        </div>
+    </div>
+</body>
+</html>

@@ -1,0 +1,55 @@
+VIBELINK - SIMPLE SYSTEM OVERVIEW
+==================================
+
+ARCHITECTURE DIAGRAM
+====================
+
+    ┌─────────────────┐    HTTP/REST API    ┌─────────────────┐
+    │   FRONTEND      │◄──────────────────►│   BACKEND       │
+    │   (React)       │                    │   (Django)      │
+    │                 │                    │                 │
+    │ • React 19      │                    │ • Django 5.2    │
+    │ • TypeScript    │                    │ • REST API      │
+    │ • Redux         │                    │ • JWT Auth      │
+    │ • Tailwind CSS  │                    │ • SQLite DB     │
+    │ • Vite Build    │                    │ • Swagger Docs  │
+    └─────────────────┘                    └─────────────────┘
+           │                                        │
+           │                                        │
+           ▼                                        ▼
+    ┌─────────────────┐                    ┌─────────────────┐
+    │   USER BROWSER  │                    │   DATABASE      │
+    │                 │                    │                 │
+    │ • Login/Register│                    │ • User Profiles │
+    │ • Profile Mgmt  │                    │ • OTP System    │
+    │ • Chat/Discover │                    │ • Location Data │
+    │ • Settings      │                    │ • Hashtags      │
+    └─────────────────┘                    └─────────────────┘
+
+TECH STACK
+==========
+
+Frontend:
+- React 19 + TypeScript
+- Redux for state management
+- Tailwind CSS for styling
+- Vite for building
+
+Backend:
+- Django 5.2 + Python
+- REST API with JWT auth
+- SQLite database
+- Swagger documentation
+
+TESTING
+=======
+
+Backend:
+- Django unittest framework
+- API endpoint testing
+- Model validation tests
+
+Frontend:
+- ESLint code quality
+- TypeScript type checking
+- Build validation

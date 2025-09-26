@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Order Notification</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo {
+            max-height: 60px;
+        }
+        .order-details {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .order-items {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        .order-items th, .order-items td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .order-items th {
+            background-color: #f2f2f2;
+        }
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+            font-size: 12px;
+            color: #777;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <img src="{{ company_logo }}" alt="{{ company_name }}" class="logo">
+            <h2>New Order Notification</h2>
+        </div>
+        
+        <p>Hello Admin,</p>
+        
+        <p>A new order has been placed on {{ company_name }}.</p>
+        
+        <div class="order-details">
+            <p><strong>Order ID:</strong> {{ order.id }}</p>
+            <p><strong>Date:</strong> {{ order.created_at }}</p>
+            <p><strong>Customer:</strong> {{ username }} ({{ user_email }})</p>
+            <p><strong>Phone:</strong> {{ phone_number }}</p>
+            
+            <h3>Order Summary</h3>
+            <table class="order-items">
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in order.items %}
+                    <tr>
+                        <td>{{ item.product_name }}</td>
+                        <td>{{ item.quantity }}</td>
+                        <td>₹{{ item.price }}</td>
+                        <td>₹{{ item.total }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <p><strong>Subtotal:</strong> ₹{{ order.subtotal }}</p>
+            {% if order.discount > 0 %}<p><strong>Discount:</strong> ₹{{ order.discount }}</p>{% endif %}
+            {% if order.coupon %}<p><strong>Coupon:</strong> {{ order.coupon }}</p>{% endif %}
+            <p><strong>Shipping:</strong> {% if order.is_free_shipping %}Free{% else %}₹{{ order.shipping_cost }}{% endif %}</p>
+            <p><strong>Tax:</strong> ₹{{ order.tax_amount }}</p>
+            <p><strong>Total:</strong> ₹{{ order.total }}</p>
+            
+            <h3>Shipping Address</h3>
+            <p>{{ order.shipping_address }}</p>
+        </div>
+        
+        <div style="text-align: center;">
+            <a href="{{ admin_order_url }}" class="button">View Order Details</a>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated message from {{ company_name }}.</p>
+            <p>© {{ current_year }} {{ company_name }} - {{ company_domain }}</p>
+        </div>
+    </div>
+</body>
+</html>

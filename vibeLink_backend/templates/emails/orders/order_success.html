@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f8f8f8;">
+    <div style="max-width: 600px; margin: 40px auto; background: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+        <!-- Company Header -->
+        <div style="background: white; padding: 20px; text-align: center; border-bottom: 1px solid #eee;">
+            <img src="{{company_logo}}" alt="{{company_name}}" style="max-height: 60px; margin-bottom: 10px;">
+            <h2 style="margin: 0; color: #ff6b00; font-size: 24px;">{{company_name}}</h2>
+        </div>
+
+        <!-- Confirmation Header -->
+        <div style="background: linear-gradient(135deg, #ff6b00 0%, #ff8533 100%); color: white; padding: 40px 20px; text-align: center;">
+            <div style="width: 80px; height: 80px; background: #ff6b00; border-radius: 50%; margin: 0 auto 20px; position: relative;">
+                <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 40px; color: white; font-weight: bold;">✓</span>
+            </div>
+            <h1 style="margin: 0; color: white;">Order Confirmed!</h1>
+        </div>
+        
+        <div style="padding: 40px 30px; background: white;">
+            <p style="margin-bottom: 20px;">Dear {{username}},</p>
+            
+            <p style="margin-bottom: 20px;">Thank you for your order! We're pleased to confirm that your order has been successfully processed.</p>
+            
+            <p style="margin-bottom: 20px;">We've attached your invoice to this email for your records.</p>
+            
+            <div style="text-align: center; margin: 30px 0;">
+                <a href="{{invoice_link}}" style="display: inline-block; padding: 12px 24px; background: #ff6b00; color: white; text-decoration: none; border-radius: 6px; font-weight: 600;">View Invoice</a>
+            </div>
+
+            <div style="background: #fff8f3; padding: 15px; border-radius: 6px; margin-top: 30px;">
+                <p style="margin: 0;">If you have any questions, please contact our support team at:<br>
+                <strong>support@{{company_domain}}</strong></p>
+            </div>
+        </div>
+
+        <div style="background: #f8f8f8; padding: 20px; text-align: center; font-size: 0.9em; color: #666;">
+            <p style="margin-bottom: 15px;">This email was sent to {{user_email}}</p>
+            <div style="height: 1px; background: #eee; margin: 20px 0;"></div>
+            <p style="margin: 0;">Copyright © 2025 {{company_name}}. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
