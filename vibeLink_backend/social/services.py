@@ -225,6 +225,6 @@ def get_user_matches(user: User, limit: int = 10) -> List[Dict[str, Any]]:
                 }
             })
     
-    # Sort by match percentage and return top matches
-    matches.sort(key=lambda x: x['match_percentage'], reverse=True)
+    # Sort by distance (nearest first), then by match percentage as secondary sort
+    matches.sort(key=lambda x: (x['distance'] if x['distance'] is not None else float('inf'), -x['match_percentage']))
     return matches[:limit]

@@ -62,6 +62,9 @@ class UserDiscoveryView(generics.ListAPIView):
                 if match['distance'] is None or match['distance'] <= radius
             ]
         
+        # Sort by distance (nearest first), then by match percentage as secondary sort
+        matches.sort(key=lambda x: (x['distance'] if x['distance'] is not None else float('inf'), -x['match_percentage']))
+        
         # Store match data in the request for the serializer to access
         self.request._match_data = {match['user'].id: match for match in matches}
         
@@ -331,7 +334,7 @@ def ai_recommendations(request):
         filtered_matches = []
         for match in all_matches:
             user = match['user']
-                # Skip already followed users
+            # Skip already followed users
             if Follow.objects.filter(follower=request.user, following=user).exists():
                 continue
             
@@ -343,7 +346,10 @@ def ai_recommendations(request):
             if match.get('distance') and match['distance'] > location_radius:
                 continue
             
-        filtered_matches.append(match)
+            filtered_matches.append(match)
+        
+        # Sort by distance (nearest first), then by match percentage as secondary sort
+        filtered_matches.sort(key=lambda x: (x['distance'] if x['distance'] is not None else float('inf'), -x['match_percentage']))
         
         # Calculate pagination
         start_idx = (page - 1) * per_page

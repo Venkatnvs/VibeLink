@@ -153,6 +153,9 @@ Provide 5-10 high-quality recommendations with detailed analysis.
                 
             filtered_matches.append(match)
         
+        # Sort by distance (nearest first), then by match percentage as secondary sort
+        filtered_matches.sort(key=lambda x: (x['distance'] if x['distance'] is not None else float('inf'), -x['match_percentage']))
+        
         # Calculate pagination
         start_idx = (page - 1) * per_page
         end_idx = start_idx + per_page
