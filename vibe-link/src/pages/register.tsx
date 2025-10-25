@@ -150,13 +150,13 @@ export function RegisterPage() {
       return
     }
     
-    if (selectedHashtags.length < 5) {
-      alert('Please select at least 5 hashtags')
+    if (selectedHashtags.length < 10) {
+      alert('Please select at least 10 hashtags')
       return
     }
 
-    if (!formData.age || !formData.profilePhoto || !formData.location.latitude || !formData.location.longitude) {
-      alert('Please fill in all required fields including age, profile photo, and location coordinates')
+    if (!formData.age || !formData.location.latitude || !formData.location.longitude) {
+      alert('Please fill in all required fields including age and location coordinates')
       return
     }
 
@@ -169,7 +169,9 @@ export function RegisterPage() {
     formDataToSend.append('password', formData.password)
     formDataToSend.append('confirm_password', formData.confirmPassword)
     formDataToSend.append('age', formData.age)
-    formDataToSend.append('profile_photo', formData.profilePhoto)
+    if (formData.profilePhoto) {
+      formDataToSend.append('profile_photo', formData.profilePhoto)
+    }
     formDataToSend.append('city', formData.location.city)
     formDataToSend.append('state', formData.location.state)
     formDataToSend.append('latitude', formData.location.latitude)
@@ -184,7 +186,9 @@ export function RegisterPage() {
     try {
       const result = await dispatch(registerUser(formDataToSend)).unwrap()
       console.log('Registration successful:', result)
-      toast.success('Registration successful. Please verify your email')
+      toast.success('Registration successful. Please verify your email', {
+        duration: 5000, // 5 seconds
+      })
       
       // Store the email from the response
       const emailFromResponse = (result as any)?.email
@@ -211,8 +215,25 @@ export function RegisterPage() {
       
     } catch (error) {
       console.error('Registration failed:', error)
-      const message = (error as any)?.toString?.() || 'Registration failed'
-      toast.error(message)
+      // Handle error object properly
+      let errorMessage = 'Registration failed'
+      if (error && typeof error === 'object') {
+        const errorObj = error as any
+        if (errorObj.email && Array.isArray(errorObj.email)) {
+          errorMessage = `Email: ${errorObj.email.join(', ')}`
+        }
+        if (errorObj.password && Array.isArray(errorObj.password)) {
+          const passwordErrors = errorObj.password.join(', ')
+          errorMessage = errorMessage.includes('Email:') 
+            ? `${errorMessage}; Password: ${passwordErrors}`
+            : `Password: ${passwordErrors}`
+        }
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+      toast.error(errorMessage, {
+        duration: 10000, // 10 seconds for error messages
+      })
     }
   }
 
@@ -330,7 +351,7 @@ export function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="profilePhoto">Profile Photo</Label>
+                <Label htmlFor="profilePhoto">Profile Photo (Optional)</Label>
                 <div className="space-y-3">
                   {photoPreview && (
                     <div className="flex justify-center">
@@ -349,7 +370,6 @@ export function RegisterPage() {
                       accept="image/*"
                       onChange={handleFileChange}
                       className="hidden"
-                      required
                     />
                     <Label 
                       htmlFor="profilePhoto" 
@@ -456,7 +476,7 @@ export function RegisterPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="bio">Bio</Label>
+                <Label htmlFor="bio">Bio (Optional)</Label>
                 <textarea
                   id="bio"
                   name="bio"
@@ -531,13 +551,16 @@ export function RegisterPage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold text-foreground">Select Your Interests</h3>
                 <span className="text-sm text-muted-foreground">
-                  {selectedHashtags.length}/10 selected
+                  {selectedHashtags.length} selected
+                  <span className="text-xs text-right text-yellow-500 mx-2">
+                    (minimum 10 hashtags required)
+                  </span>
                 </span>
               </div>
               
               <p className="text-sm text-muted-foreground">
                 Choose hashtags that represent your interests, values, and what you're looking for in friendships. 
-                This helps us find better matches for you.
+                Select at least 10 hashtags to help others understand your personality and interests.
               </p>
 
               {/* Category Tabs */}
@@ -612,7 +635,7 @@ export function RegisterPage() {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={selectedHashtags.length < 5 || isLoading}
+              disabled={selectedHashtags.length < 10 || isLoading}
             >
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>

@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { fetchUserPosts, toggleLike, toggleShare } from '@/store/slices/postsSlice'
 import { fetchUserProfile, toggleFollow } from '@/store/slices/socialSlice'
+import { startConversation } from '@/store/slices/chatSlice'
 import { formatNumber } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -144,9 +145,14 @@ export function UserProfilePage() {
     dispatch(toggleFollow(profileUser.id))
   }
 
-  const handleMessage = () => {
-    // In a real app, this would navigate to chat
-    navigate(`/chat`)
+  const handleMessage = async () => {
+    try {
+      await dispatch(startConversation(profileUser.id)).unwrap()
+      navigate(`/chat/${profileUser.id}`)
+    } catch (error) {
+      console.error('Failed to start conversation:', error)
+      navigate('/chat')
+    }
   }
 
   const isFollowing = profileUser.is_following

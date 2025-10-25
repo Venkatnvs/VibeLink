@@ -57,6 +57,7 @@ class RegisterSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, validators=[validate_password])
     confirm_password = serializers.CharField(write_only=True)
     profile_photo = serializers.ImageField(required=False, write_only=True)
+    bio = serializers.CharField(required=False, allow_blank=True)
     hashtags = serializers.ListField(child=serializers.CharField(), required=True)
 
     class Meta:
@@ -85,11 +86,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         if attrs['password'] != attrs['confirm_password']:
             raise serializers.ValidationError("Passwords do not match.")
         
-        if len(attrs['hashtags']) < 5:
-            raise serializers.ValidationError("Please select at least 5 hashtags.")
-        
-        if len(attrs['hashtags']) > 10:
-            raise serializers.ValidationError("You can select maximum 10 hashtags.")
+        if len(attrs['hashtags']) < 10:
+            raise serializers.ValidationError("Please select at least 10 hashtags.")
         
         return attrs
 

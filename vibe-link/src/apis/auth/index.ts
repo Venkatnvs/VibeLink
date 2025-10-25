@@ -1,8 +1,6 @@
 import AXIOS_INSTANCE from "../axios";
 import type {
-  RegisterData,
   LoginCredentials,
-  OtpData,
   UserProfile,
   AuthTokens
 } from "../types";
@@ -17,7 +15,7 @@ export const registerApi = (formData: FormData) =>
 
 // Login user
 export const loginApi = (credentials: LoginCredentials) =>
-  AXIOS_INSTANCE.post<{ data: any }>('/api/auth/login/', credentials);
+  AXIOS_INSTANCE.post<any>('/api/auth/login/', credentials);
 
 // Refresh token
 export const refreshTokenApi = (refreshToken: string) =>
@@ -25,7 +23,7 @@ export const refreshTokenApi = (refreshToken: string) =>
 
 // Get user profile
 export const fetchUserApi = () =>
-  AXIOS_INSTANCE.get<{ data: UserProfile }>('/api/auth/user/');
+  AXIOS_INSTANCE.get<UserProfile>('/api/auth/user/');
 
 // Update user profile
 export const updateUserApi = (formData: FormData) =>

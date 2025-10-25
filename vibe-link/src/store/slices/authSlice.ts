@@ -7,7 +7,7 @@ import {
   verifyOtpApi, 
   fetchUserApi 
 } from '@/apis/auth'
-import type { UserProfile, AuthTokens, LoginResponse } from '@/apis/types'
+import type { UserProfile } from '@/apis/types'
 
 export interface User extends UserProfile {}
 
@@ -54,10 +54,30 @@ export const registerUser = createAsyncThunk(
 
 export const loginUser = createAsyncThunk(
   'auth/login',
-  async (credentials: { email: string; password: string }, { rejectWithValue }) => {
+  async (credentials: { email: string; password: string }, { rejectWithValue, dispatch }) => {
     try {
       const response = await loginApi(credentials)
-      return response.data
+      console.log('Raw login API response:', response)
+      console.log('Login response data:', response.data)
+      const loginData = response.data
+      
+      // Always fetch complete user profile after login since login response is incomplete
+      if (loginData && loginData.tokens) {
+        console.log('Login successful, fetching user profile...')
+        console.log('Login tokens:', loginData.tokens)
+        // Store tokens in localStorage immediately so getUserProfile can access them
+        localStorage.setItem('accessToken', loginData.tokens.access)
+        localStorage.setItem('refreshToken', loginData.tokens.refresh)
+        try {
+          const profileData = await dispatch(getUserProfile(loginData.tokens.access)).unwrap()
+          console.log('User profile fetched successfully:', profileData)
+        } catch (profileError) {
+          console.warn('Failed to fetch complete user profile after login:', profileError)
+          // Continue with login even if profile fetch fails
+        }
+      }
+      
+      return loginData
     } catch (error: any) {
       return rejectWithValue(error.response?.data?.detail || 'Login failed')
     }
@@ -90,16 +110,22 @@ export const verifyOTP = createAsyncThunk(
 
 export const getUserProfile = createAsyncThunk(
   'auth/getUserProfile',
-  async (_, { rejectWithValue, getState }) => {
+  async (token: string | undefined, { rejectWithValue, getState }) => {
     try {
       const state = getState() as any
-      const token = state.auth.tokens.access
-      if (!token) {
+      const accessToken = token || state.auth.tokens.access
+      console.log('getUserProfile - Current state:', state.auth)
+      console.log('getUserProfile - Access token:', accessToken)
+      if (!accessToken) {
         throw new Error('No access token')
       }
       const response = await fetchUserApi()
-      return response.data
+      console.log('Raw getUserProfile response:', response)
+      console.log('getUserProfile response data:', response.data)
+      return response.data  // Direct response from backend
     } catch (error: any) {
+      console.error('getUserProfile error:', error)
+      console.error('getUserProfile error response:', error.response)
       return rejectWithValue(error.response?.data?.detail || 'Failed to get user profile')
     }
   }
@@ -108,8 +134,7 @@ export const getUserProfile = createAsyncThunk(
 // Initialize auth state from localStorage
 export const initializeAuth = createAsyncThunk(
   'auth/initialize',
-  async (_, { dispatch, getState }) => {
-    const state = getState() as any
+  async (_, { dispatch }) => {
     const accessToken = localStorage.getItem('accessToken')
     const refreshToken = localStorage.getItem('refreshToken')
     
@@ -199,7 +224,22 @@ const authSlice = createSlice({
       })
       .addCase(registerUser.rejected, (state, action) => {
         state.isLoading = false
-        state.error = action.payload as string
+        // Handle error object properly - convert to readable string
+        const errorPayload = action.payload as any
+        if (typeof errorPayload === 'object' && errorPayload !== null) {
+          // Convert validation errors to readable format
+          const errorMessages: string[] = []
+          Object.keys(errorPayload).forEach(field => {
+            if (Array.isArray(errorPayload[field])) {
+              errorMessages.push(`${field}: ${errorPayload[field].join(', ')}`)
+            } else {
+              errorMessages.push(`${field}: ${errorPayload[field]}`)
+            }
+          })
+          state.error = errorMessages.join('; ')
+        } else {
+          state.error = errorPayload as string
+        }
         // Clear OTP state on error
         state.otpSent = false
       })
@@ -211,12 +251,30 @@ const authSlice = createSlice({
       })
       .addCase(loginUser.fulfilled, (state, action) => {
         state.isLoading = false
+        state.isInitialized = true  // Set initialized to true after successful login
         // Handle the response structure properly
         const payload = action.payload as any
         console.log('Login response payload:', payload)
         
         if (payload && typeof payload === 'object') {
-          if (payload.user && payload.tokens) {
+          // Handle the actual backend response structure
+          if (payload.tokens && payload.id) {
+            // Don't set incomplete user data here - wait for getUserProfile to set complete data
+            // Just set tokens and authentication state
+            state.tokens = {
+              access: payload.tokens.access || null,
+              refresh: payload.tokens.refresh || null
+            }
+            state.isAuthenticated = true
+            state.otpVerified = payload.is_otp_verified || true
+            // Store tokens in localStorage
+            if (payload.tokens.access) {
+              localStorage.setItem('accessToken', payload.tokens.access)
+            }
+            if (payload.tokens.refresh) {
+              localStorage.setItem('refreshToken', payload.tokens.refresh)
+            }
+          } else if (payload.user && payload.tokens) {
             // Login response with user and tokens
             state.user = payload.user as User
             state.tokens = {
@@ -241,42 +299,6 @@ const authSlice = createSlice({
             state.isAuthenticated = true
             localStorage.setItem('accessToken', payload.access)
             localStorage.setItem('refreshToken', payload.refresh)
-          } else if (payload.tokens && (payload.email || payload.id)) {
-            // Backend response structure: user data + tokens object
-            state.user = {
-              id: payload.id,
-              email: payload.email,
-              username: payload.username,
-              firstName: payload.first_name,
-              lastName: payload.last_name,
-              fullName: payload.full_name,
-              age: payload.age,
-              profilePhoto: payload.profile_photo,
-              bio: payload.bio,
-              city: payload.city,
-              state: payload.state,
-              latitude: payload.latitude,
-              longitude: payload.longitude,
-              hashtags: payload.hashtags,
-              isActive: payload.is_active,
-              isOtpVerified: payload.is_otp_verified,
-              isCompleted: payload.is_completed,
-              dateJoined: payload.date_joined,
-              lastLogin: payload.last_login
-            } as User
-            state.tokens = {
-              access: payload.tokens.access || null,
-              refresh: payload.tokens.refresh || null
-            }
-            state.isAuthenticated = true
-            state.otpVerified = payload.is_otp_verified || true
-            // Store tokens in localStorage
-            if (payload.tokens.access) {
-              localStorage.setItem('accessToken', payload.tokens.access)
-            }
-            if (payload.tokens.refresh) {
-              localStorage.setItem('refreshToken', payload.tokens.refresh)
-            }
           }
         }
       })
@@ -317,15 +339,17 @@ const authSlice = createSlice({
       
       // Get User Profile
       .addCase(getUserProfile.pending, (state) => {
-        state.isLoading = true
+        // Don't set isLoading = true here since we already have basic user data from login
         state.error = null
       })
       .addCase(getUserProfile.fulfilled, (state, action) => {
         state.isLoading = false
         const payload = action.payload as any
+        console.log('getUserProfile.fulfilled payload:', payload)
         if (payload) {
           state.user = payload as User
           state.isAuthenticated = true
+          console.log('User profile updated in state:', state.user)
         }
       })
       .addCase(getUserProfile.rejected, (state, action) => {

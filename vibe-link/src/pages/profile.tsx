@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
-import { fetchPosts, createPost, toggleLike, toggleShare } from '@/store/slices/postsSlice'
+import { fetchPosts, createPost, toggleLike, toggleShare, deletePost } from '@/store/slices/postsSlice'
 import { updateUserApi } from '@/apis/auth'
 import { FRIENDSHIP_HASHTAGS } from '@/lib/constants'
 import { formatNumber } from '@/lib/utils'
@@ -23,7 +23,8 @@ import {
   Plus,
   ImageIcon,
   X,
-  Camera
+  Camera,
+  Trash2
 } from 'lucide-react'
 import {
   Dialog,
@@ -76,6 +77,8 @@ export function ProfilePage() {
 
   const [shareOpen, setShareOpen] = useState(false)
   const [sharePostId, setSharePostId] = useState<number | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [postToDelete, setPostToDelete] = useState<number | null>(null)
 
   const currentUser = user
   const userPosts = posts.filter(post => post && post.user && post.user.id === parseInt(currentUser?.id || '0'))
@@ -111,6 +114,29 @@ export function ProfilePage() {
   const handleShare = (postId: number) => {
     setSharePostId(postId)
     setShareOpen(true)
+  }
+
+  const handleDeletePost = (postId: number) => {
+    setPostToDelete(postId)
+    setDeleteDialogOpen(true)
+  }
+
+  const confirmDeletePost = async () => {
+    if (postToDelete) {
+      try {
+        await dispatch(deletePost(postToDelete)).unwrap()
+        setDeleteDialogOpen(false)
+        setPostToDelete(null)
+      } catch (error) {
+        console.error('Failed to delete post:', error)
+        alert('Failed to delete post. Please try again.')
+      }
+    }
+  }
+
+  const cancelDeletePost = () => {
+    setDeleteDialogOpen(false)
+    setPostToDelete(null)
   }
 
   const handleEditProfile = () => {
@@ -284,6 +310,37 @@ export function ProfilePage() {
           }
         }}
       />
+
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Trash2 className="h-5 w-5 text-destructive" />
+              <span>Delete Post</span>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this post? This action cannot be undone.
+            </p>
+            <div className="flex justify-end space-x-2">
+              <Button 
+                variant="outline" 
+                onClick={cancelDeletePost}
+              >
+                Cancel
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmDeletePost}
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                Delete Post
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
       {/* Profile Header */}
       <Card className="mb-8">
         <div className="relative">
@@ -761,22 +818,32 @@ export function ProfilePage() {
             {userPosts.map((post) => (
               <Card key={post.id} data-post-id={post.id} className={`group hover:shadow-lg transition-all duration-300 border-0 shadow-md bg-card/50 backdrop-blur-sm ${shouldHighlightPost(post.id) ? 'ring-2 ring-yellow-400 bg-yellow-50 dark:bg-yellow-900/20' : ''}`}>
                 <CardHeader className="pb-4">
-                  <div className="flex items-center space-x-3">
-                    <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                      <AvatarImage src={post.user?.profile_photo} />
-                      <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white font-semibold">
-                        {post.user?.full_name?.[0] || post.user?.username?.[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-semibold text-sm text-foreground truncate">
-                        {post.user?.full_name || post.user?.username}
-                      </div>
-                      <div className="text-xs text-muted-foreground flex items-center space-x-1">
-                        <Calendar className="h-3 w-3" />
-                        <span>{post.timestamp}</span>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <Avatar className="w-10 h-10 ring-2 ring-primary/20">
+                        <AvatarImage src={post.user?.profile_photo} />
+                        <AvatarFallback className="bg-gradient-to-br from-primary to-secondary text-white font-semibold">
+                          {post.user?.full_name?.[0] || post.user?.username?.[0]}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-sm text-foreground truncate">
+                          {post.user?.full_name || post.user?.username}
+                        </div>
+                        <div className="text-xs text-muted-foreground flex items-center space-x-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{post.timestamp}</span>
+                        </div>
                       </div>
                     </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => handleDeletePost(post.id)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-2 h-auto text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardHeader>
 
