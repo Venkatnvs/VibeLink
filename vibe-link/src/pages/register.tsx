@@ -89,11 +89,21 @@ export function RegisterPage() {
     if (name.includes('.')) {
       const [parent, child] = name.split('.')
       if (parent === 'location') {
+        let formattedValue = value
+        
+        // Format latitude and longitude to max 6 decimal places
+        if (child === 'latitude' || child === 'longitude') {
+          const numValue = parseFloat(value)
+          if (!isNaN(numValue)) {
+            formattedValue = numValue.toFixed(6)
+          }
+        }
+        
         setFormData(prev => ({
           ...prev,
           location: {
             ...prev.location,
-            [child]: value
+            [child]: formattedValue
           }
         }))
       }
@@ -424,8 +434,8 @@ export function RegisterPage() {
                             ...prev,
                             location: {
                               ...prev.location,
-                              latitude: position.coords.latitude.toString(),
-                              longitude: position.coords.longitude.toString()
+                              latitude: position.coords.latitude.toFixed(6),
+                              longitude: position.coords.longitude.toFixed(6)
                             }
                           }))
                         },
