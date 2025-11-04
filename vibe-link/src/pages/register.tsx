@@ -136,9 +136,7 @@ export function RegisterPage() {
     setSelectedHashtags(prev => 
       prev.includes(hashtag) 
         ? prev.filter(h => h !== hashtag)
-        : prev.length < 10 
-          ? [...prev, hashtag]
-          : prev
+        : [...prev, hashtag]
     )
   }
 

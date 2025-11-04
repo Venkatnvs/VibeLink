@@ -121,6 +121,8 @@ export function ChatPage() {
   // Handle recipient ID from URL
   useEffect(() => {
     if (recipientId && !conversationsLoading) {
+      // Don't override if user has already selected a chat
+      if (selectedChat) return
       if (conversations.length > 0) {
         // Find conversation with the recipient
         const conversation = conversations.find(chat => 
@@ -129,6 +131,8 @@ export function ChatPage() {
         if (conversation) {
           setSelectedChat(conversation.id)
           if (isMobile) setShowSidebar(false)
+          // Clear recipient from URL once consumed
+          navigate('/chat', { replace: true })
         } else {
           // If no conversation exists, create one
           dispatch(startConversation(parseInt(recipientId)))
@@ -136,6 +140,8 @@ export function ChatPage() {
             .then((newConversation) => {
               setSelectedChat(newConversation.id)
               if (isMobile) setShowSidebar(false)
+              // Clear recipient from URL once created
+              navigate('/chat', { replace: true })
             })
             .catch((error) => {
               console.error('Failed to create conversation:', error)
@@ -150,6 +156,8 @@ export function ChatPage() {
           .then((newConversation) => {
             setSelectedChat(newConversation.id)
             if (isMobile) setShowSidebar(false)
+            // Clear recipient from URL once created
+            navigate('/chat', { replace: true })
           })
           .catch((error) => {
             console.error('Failed to create conversation:', error)
@@ -158,7 +166,7 @@ export function ChatPage() {
           })
       }
     }
-  }, [recipientId, conversations, conversationsLoading, dispatch, isMobile, navigate])
+  }, [recipientId, conversations, conversationsLoading, dispatch, isMobile, navigate, selectedChat])
 
   const filteredChats = (conversations || []).filter(chat =>
     chat?.other_participant?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -199,12 +207,20 @@ export function ChatPage() {
     if (isMobile) {
       setShowSidebar(false)
     }
+    // If URL contained a recipient, clear it on manual change
+    if (recipientId) {
+      navigate('/chat', { replace: true })
+    }
   }
 
   const handleBackToChats = () => {
     setSelectedChat(null)
     if (isMobile) {
       setShowSidebar(true)
+    }
+    // Clear recipient param if present when returning to list
+    if (recipientId) {
+      navigate('/chat', { replace: true })
     }
   }
 
